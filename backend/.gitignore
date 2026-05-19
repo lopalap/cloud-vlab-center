@@ -1,9 +1,0 @@
-# 환경변수
-.env
-
-# 패키지
-node_modules/
-
-# 로그
-*.log
-
