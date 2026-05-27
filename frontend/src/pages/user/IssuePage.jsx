@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
 function IssuePage() {
   const [priority, setPriority] = useState("보통");

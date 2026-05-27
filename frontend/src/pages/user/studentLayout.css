@@ -1,3 +1,37 @@
+:root {
+  --color-background: #f4f7fb;
+  --color-sidebar: #0f172a;
+  --color-sidebar-light: #1e293b;
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-card: #ffffff;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+  --color-muted: #6b7280;
+  --radius-card: 20px;
+  --radius-button: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+
+
+
 .student-layout {
   display: flex;
   min-height: 100vh;
@@ -538,6 +572,9 @@
   background: white;
   padding: 12px 14px;
   font-size: 14px;
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 500;
+  line-height: 1.5;
   color: var(--color-text);
   outline: none;
 }
@@ -1365,4 +1402,11 @@
 .notice-preview-header .small-link-button {
   margin-top: 0;
   flex-shrink: 0;
+}
+
+.student-layout button,
+.student-layout input,
+.student-layout select,
+.student-layout textarea {
+  font-family: 'Noto Sans KR', sans-serif;
 }

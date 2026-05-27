@@ -1,3 +1,5 @@
+import React from "react";
+
 function ReservationApply({ onMovePage }) {
   return (
     <>

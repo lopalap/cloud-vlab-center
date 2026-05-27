@@ -4,6 +4,8 @@ import Login from './pages/Login';
 import EmailAuth from './pages/EmailAuth';
 import RegisterInfo from './pages/RegisterInfo';
 import Home from './pages/Home';
+import StudentLayout from './pages/user/StudentLayout';
+import AdminLayout from './pages/admin/AdminLayout';
 
 export default function App() {
   const [step, setStep] = useState('login'); 
@@ -34,6 +36,26 @@ export default function App() {
       }
     }
   };
+
+  const handleLogout = () => {
+    alert('로그아웃되었습니다.');
+
+
+    setStep('login');
+    setLoginEmail('');
+    setLoginPassword('');
+    setRole('student');
+  };
+
+  if (step === 'home' && role === 'student') {
+    return <StudentLayout onLogout={handleLogout} />;
+  }
+
+  if (step === 'home' && role === 'admin') {
+    return <AdminLayout onLogout={handleLogout} />;
+  }
+
+
 
   return (
     <Container>

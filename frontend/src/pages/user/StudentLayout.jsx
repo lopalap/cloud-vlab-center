@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   LayoutDashboard,
   CalendarDays,
@@ -20,7 +20,7 @@ import UsageStatus from "./UsageStatus";
 import NoticePage from "./NoticePage";
 import "./studentLayout.css";
 
-function StudentLayout() {
+function StudentLayout({ onLogout }) {
   const [activePage, setActivePage] = useState("dashboard");
 
   const menuItems = [
@@ -47,7 +47,7 @@ function StudentLayout() {
     if (activePage === "reservations") return <MyReservations />;
     if (activePage === "usage") return <UsageStatus />;
     if (activePage === "issues") return <IssuePage />;
-    if (activePage === "mypage") return <MyPage />;
+    if (activePage === "mypage") return <MyPage onLogout={onLogout} />;
     if (activePage === "notices") return <NoticePage />;
 
     return <StudentDashboard />;
@@ -83,7 +83,13 @@ function StudentLayout() {
               
         </nav>
 
-        <button className="logout-button">로그아웃</button>
+        <button
+          type="button"
+          className="logout-button"
+          onClick={onLogout}
+            >
+          로그아웃
+        </button>
       </aside>
 
       <main className="student-main">{renderPage()}</main>

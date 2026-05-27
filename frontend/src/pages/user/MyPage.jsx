@@ -1,4 +1,6 @@
-function MyPage() {
+import React from "react";
+
+function MyPage({ onLogout }) {
   return (
     <>
       <section className="page-header">
@@ -71,7 +73,13 @@ function MyPage() {
               <button>개인 정보 수정</button>
               <button>비밀번호 변경</button>
               <button>알림 설정</button>
-              <button className="danger-setting">로그아웃</button>
+              <button
+                type="button"
+                className="danger-setting"
+                onClick={onLogout}
+                  >
+                로그아웃
+              </button>
             </div>
           </div>
         </div>
