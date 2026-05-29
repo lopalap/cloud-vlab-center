@@ -102,6 +102,11 @@ function WeeklyReservation({ onMovePage }) {
     "15:00",
     "16:00",
     "17:00",
+    "18:00",
+    "19:00",
+    "20:00",
+    "21:00",
+    "22:00",
   ];
 
   const baseDate = new Date(2025, 4, 19);

@@ -16,6 +16,8 @@ import ReservationApply from "./ReservationApply";
 import MyReservations from "./MyReservations";
 import IssuePage from "./IssuePage";
 import MyPage from "./MyPage";
+import EditProfile from "./EditProfile";
+import ChangePassword from "./ChangePassword";
 import UsageStatus from "./UsageStatus";
 import NoticePage from "./NoticePage";
 import "./studentLayout.css";
@@ -47,7 +49,14 @@ function StudentLayout({ onLogout }) {
     if (activePage === "reservations") return <MyReservations />;
     if (activePage === "usage") return <UsageStatus />;
     if (activePage === "issues") return <IssuePage />;
-    if (activePage === "mypage") return <MyPage onLogout={onLogout} />;
+    if (activePage === "mypage")
+      return <MyPage onLogout={onLogout} onMovePage={setActivePage} />;
+
+    if (activePage === "editProfile")
+      return <EditProfile onMovePage={setActivePage} />;
+    if (activePage === "changePassword")
+      return <ChangePassword onMovePage={setActivePage} />;
+
     if (activePage === "notices") return <NoticePage />;
 
     return <StudentDashboard />;
@@ -71,8 +80,12 @@ function StudentLayout({ onLogout }) {
               <button
                 key={item.id}
                 className={`sidebar-menu-item ${
-                    activePage === item.id ? "active" : ""
-                    }`}
+                  activePage === item.id ||
+                  (item.id === "mypage" &&
+                  ["editProfile", "changePassword"].includes(activePage))
+                  ? "active"
+                    : ""
+                  }`}
                 onClick={() => setActivePage(item.id)}
                 >
                     <Icon size={18} strokeWidth={2} />

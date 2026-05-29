@@ -7,7 +7,6 @@ import {
   AlertCircle,
   Bell,
   Users,
-  Settings,
 } from "lucide-react";
 
 import Dashboard from "./Dashboard";
@@ -17,7 +16,7 @@ import DockerControl from "./DockerControl";
 import IssueTracker from "./IssueTracker";
 import Notice from "./Notice";
 import UserDirectory from "./UserDirectory";
-import Configuration from "./Configuration";
+
 
 function AdminLayout({ onLogout }) {
   const [activePage, setActivePage] = useState("dashboard");
@@ -30,7 +29,7 @@ function AdminLayout({ onLogout }) {
     { id: "issues", label: "이슈 관리", icon: AlertCircle },
     { id: "notices", label: "공지사항", icon: Bell },
     { id: "users", label: "사용자 관리", icon: Users },
-    { id: "settings", label: "설정", icon: Settings },
+    
   ];
 
   const renderPage = () => {
@@ -41,7 +40,7 @@ function AdminLayout({ onLogout }) {
     if (activePage === "issues") return <IssueTracker />;
     if (activePage === "notices") return <Notice />;
     if (activePage === "users") return <UserDirectory />;
-    if (activePage === "settings") return <Configuration />;
+    
 
     return <Dashboard />;
   };

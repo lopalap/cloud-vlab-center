@@ -126,7 +126,7 @@ export default function Reservation() {
                           setReservations(prev => prev.map(item => item.id === res.id ? { ...item, status: '완료' } : item));
                           alert('사용자가 조기 종료를 처리하여 [완료] 상태로 회수되었습니다.');
                         }}>
-                          조기 반납 회수
+                          강제 회수
                         </EarlyCloseBtn>
                       </ActionGroup>
                     )}

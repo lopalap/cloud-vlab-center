@@ -1,6 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 
-function MyPage({ onLogout }) {
+function MyPage({ onLogout, onMovePage }) {
+  const [notificationEnabled, setNotificationEnabled] = useState(true);
+
+  const handleNotificationToggle = () => {
+    setNotificationEnabled((prev) => !prev);
+  };
+
   return (
     <>
       <section className="page-header">
@@ -70,9 +76,36 @@ function MyPage({ onLogout }) {
             </div>
 
             <div className="setting-list">
-              <button>개인 정보 수정</button>
-              <button>비밀번호 변경</button>
-              <button>알림 설정</button>
+              <button
+                type="button"
+                onClick={() => onMovePage("editProfile")}
+              >
+                개인 정보 수정
+              </button>
+              <button
+                type="button"
+                onClick={() => onMovePage("changePassword")}
+                >
+                 비밀번호 변경
+              </button>
+              <div className="notification-setting-item">
+              <span>브라우저 알림</span>
+
+              <button
+                type="button"
+                className={`notification-toggle ${
+                notificationEnabled ? "enabled" : ""
+                }`}
+                onClick={handleNotificationToggle}
+                aria-label="브라우저 알림 설정 변경"
+                aria-pressed={notificationEnabled}
+                >
+              <span className="toggle-label">
+                {notificationEnabled ? "ON" : "OFF"}
+              </span>
+              <span className="toggle-circle"></span>
+              </button>
+            </div>
               <button
                 type="button"
                 className="danger-setting"
