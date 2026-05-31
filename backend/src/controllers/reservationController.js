@@ -185,13 +185,22 @@ exports.cancelReservation = async (req, res) => {
   }
 };
 
-// 전체 예약 조회 (관리자)
+// 전체 예약 조회 (관리자) - 날짜 필터 옵션
 exports.getAllReservations = async (req, res) => {
   try {
-    const reservations = await Reservation.find()
+    const { start_date, end_date } = req.query;
+
+    const filter = {};
+    if (start_date || end_date) {
+      filter.start_time = {};
+      if (start_date) filter.start_time.$gte = new Date(start_date);
+      if (end_date) filter.start_time.$lte = new Date(end_date);
+    }
+
+    const reservations = await Reservation.find(filter)
       .populate("user_id", "name student_id")
       .populate("resource_id", "name lab_id")
-      .sort({ createdAt: -1 });
+      .sort({ start_time: 1 });
 
     res.json(reservations);
   } catch (err) {

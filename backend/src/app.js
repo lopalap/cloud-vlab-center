@@ -23,6 +23,8 @@ app.use(express.urlencoded({ extended: false }));
 require("./models/User");
 require("./models/Resource");
 require("./models/Reservation");
+require("./models/Notice");
+require("./models/Issue");
 
 const authRouter = require("./routes/auth");
 app.use("/api/auth", authRouter);
@@ -38,6 +40,12 @@ app.use("/api/resources", resourceRouter);
 
 const containerRouter = require("./routes/containers");
 app.use("/api/containers", containerRouter);
+
+const noticeRouter = require("./routes/notices");
+app.use("/api/notices", noticeRouter);
+
+const issueRouter = require("./routes/issues");
+app.use("/api/issues", issueRouter);
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

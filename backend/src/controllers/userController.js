@@ -63,3 +63,42 @@ exports.deleteMe = async (req, res) => {
     res.status(500).json({ message: "서버 오류", error: err.message });
   }
 };
+
+// 전체 사용자 목록 조회 (관리자)
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find()
+      .select("-password -refresh_token")
+      .sort({ createdAt: -1 });
+
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "서버 오류", error: err.message });
+  }
+};
+
+// 사용자 상태 변경 (관리자) - 이용정지/복구
+exports.updateUserStatus = async (req, res) => {
+  try {
+    const { is_active } = req.body;
+
+    if (typeof is_active !== "boolean") {
+      return res.status(400).json({ message: "is_active는 true/false여야 합니다." });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: { is_active } },
+      { new: true }
+    ).select("-password -refresh_token");
+
+    if (!user) {
+      return res.status(404).json({ message: "사용자를 찾을 수 없습니다." });
+    }
+
+    const statusText = is_active ? "정상 복구" : "이용정지";
+    res.json({ message: `${user.name} 계정이 ${statusText} 처리되었습니다.`, user });
+  } catch (err) {
+    res.status(500).json({ message: "서버 오류", error: err.message });
+  }
+};
