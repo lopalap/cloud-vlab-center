@@ -51,7 +51,6 @@ async function validateReservation(resource_id, start_time, end_time, exclude_id
 
   const conflictQuery = {
     resource_id,
-    // ✅ 변경: pending→waiting, confirmed→reserved, active→using
     status: { $in: ["waiting", "reserved", "using"] },
     $or: [{ start_time: { $lt: end_time }, end_time: { $gt: start_time } }],
   };
@@ -105,7 +104,6 @@ exports.createReservation = async (req, res) => {
       start_time,
       end_time,
       purpose,
-      // default: "waiting" (Reservation.js에서 설정됨)
     });
 
     await User.findByIdAndUpdate(user_id, {
@@ -123,7 +121,7 @@ exports.getMyReservations = async (req, res) => {
   try {
     const user_id = req.user.id;
     const reservations = await Reservation.find({ user_id })
-      .populate("resource_id", "name lab_id")
+      .populate("resource_id", "name lab_id spec")
       .sort({ createdAt: -1 });
 
     res.json(reservations);
@@ -162,12 +160,10 @@ exports.cancelReservation = async (req, res) => {
       return res.status(403).json({ message: "본인 예약만 취소할 수 있습니다." });
     }
 
-    // ✅ 변경: rejected 제거 (이제 cancelled 하나로 통합)
     if (reservation.status === "cancelled") {
       return res.status(400).json({ message: "이미 취소된 예약입니다." });
     }
 
-    // ✅ 추가: 완료된 예약은 취소 불가
     if (reservation.status === "completed") {
       return res.status(400).json({ message: "이미 완료된 예약은 취소할 수 없습니다." });
     }
@@ -216,12 +212,10 @@ exports.approveReservation = async (req, res) => {
       return res.status(404).json({ message: "예약을 찾을 수 없습니다." });
     }
 
-    // ✅ 변경: "pending" → "waiting"
     if (reservation.status !== "waiting") {
       return res.status(400).json({ message: "대기 중인 예약만 승인할 수 있습니다." });
     }
 
-    // ✅ 변경: "confirmed" → "reserved"
     reservation.status = "reserved";
     reservation.approved_by = req.user.id;
     await reservation.save();
@@ -235,19 +229,16 @@ exports.approveReservation = async (req, res) => {
 // 예약 거절 (관리자)
 exports.rejectReservation = async (req, res) => {
   try {
-    // ✅ 변경: reject_reason → cancel_reason
     const { cancel_reason } = req.body;
     const reservation = await Reservation.findById(req.params.id);
     if (!reservation) {
       return res.status(404).json({ message: "예약을 찾을 수 없습니다." });
     }
 
-    // ✅ 변경: "pending" → "waiting"
     if (reservation.status !== "waiting") {
       return res.status(400).json({ message: "대기 중인 예약만 거절할 수 있습니다." });
     }
 
-    // ✅ 변경: "rejected" → "cancelled", reject_reason → cancel_reason
     reservation.status = "cancelled";
     reservation.cancel_reason = cancel_reason || "관리자에 의해 거절되었습니다.";
     await reservation.save();
@@ -270,12 +261,10 @@ exports.startReservation = async (req, res) => {
       return res.status(404).json({ message: "예약을 찾을 수 없습니다." });
     }
 
-    // ✅ 변경: "confirmed" → "reserved"
     if (reservation.status !== "reserved") {
       return res.status(400).json({ message: "승인된 예약만 시작할 수 있습니다." });
     }
 
-    // ✅ 변경: "active" → "using"
     reservation.status = "using";
     reservation.actual_start_time = new Date();
     await reservation.save();
@@ -294,12 +283,10 @@ exports.endReservation = async (req, res) => {
       return res.status(404).json({ message: "예약을 찾을 수 없습니다." });
     }
 
-    // ✅ 변경: "active" → "using"
     if (reservation.status !== "using") {
       return res.status(400).json({ message: "사용 중인 예약만 종료할 수 있습니다." });
     }
 
-    // ✅ 변경: "confirmed" → "completed" (기존 버그 수정!)
     reservation.status = "completed";
     reservation.actual_end_time = new Date();
     await reservation.save();
