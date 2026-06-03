@@ -4,7 +4,7 @@ import {
   cancelReservation,
 } from "../../api/reservations";
 
-function MyReservations() {
+function MyReservations({ onUseReservation }) {
   const [activeTab, setActiveTab] = useState("예약 예정");
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,14 +18,6 @@ function MyReservations() {
     using: "사용중",
     completed: "완료",
     cancelled: "취소됨",
-  };
-
-  const tabByStatus = {
-    waiting: "예약 예정",
-    reserved: "예약 예정",
-    using: "사용 중",
-    completed: "지난 예약",
-    cancelled: "취소된 예약",
   };
 
   const fetchReservations = async () => {
@@ -100,8 +92,82 @@ function MyReservations() {
     return `${start} - ${end}`;
   };
 
+  const formatSpec = (spec) => {
+    if (!spec) {
+      return "-";
+    }
+
+    if (typeof spec === "string") {
+      return spec;
+    }
+
+    const details = [
+      spec.gpu,
+      spec.cpu,
+      spec.memory,
+      spec.storage,
+    ].filter(Boolean);
+
+    if (details.length > 0) {
+      return details.join(" / ");
+    }
+
+    return spec.description || "-";
+  };
+
+  const isReservationAvailableNow = (reservation) => {
+    if (reservation.status !== "reserved") {
+      return false;
+    }
+
+    const now = new Date();
+    const startTime = new Date(reservation.start_time);
+    const endTime = new Date(reservation.end_time);
+
+    return now >= startTime && now < endTime;
+  };
+
+  const getReservationTab = (reservation) => {
+    if (reservation.status === "waiting") {
+      return "예약 예정";
+    }
+
+    if (reservation.status === "reserved") {
+      if (isReservationAvailableNow(reservation)) {
+        return "사용 중";
+      }
+
+      if (new Date() >= new Date(reservation.end_time)) {
+        return "지난 예약";
+      }
+
+      return "예약 예정";
+    }
+
+    if (reservation.status === "using") {
+      return "사용 중";
+    }
+
+    if (reservation.status === "completed") {
+      return "지난 예약";
+    }
+
+    if (reservation.status === "cancelled") {
+      return "취소된 예약";
+    }
+
+    return "예약 예정";
+  };
+
+  const canEnterUsageStatus = (reservation) => {
+    return (
+      reservation.status === "using" ||
+      isReservationAvailableNow(reservation)
+    );
+  };
+
   const filteredReservations = reservations.filter(
-    (reservation) => tabByStatus[reservation.status] === activeTab
+    (reservation) => getReservationTab(reservation) === activeTab
   );
 
   const getBadgeClassName = (status) => {
@@ -154,7 +220,7 @@ function MyReservations() {
                 <tr key={reservation._id}>
                   <td>{reservation.resource_id?.name || "-"}</td>
                   <td>{reservation.resource_id?.lab_id || "-"}</td>
-                  <td>{reservation.resource_id?.spec || "-"}</td>
+                  <td>{formatSpec(reservation.resource_id?.spec)}</td>
                   <td>{formatDate(reservation.start_time)}</td>
                   <td>
                     {formatTime(
@@ -169,22 +235,29 @@ function MyReservations() {
                   </td>
                   <td>
                     <div className="table-actions">
-                      {(reservation.status === "reserved" ||
-                        reservation.status === "waiting") && (
-                        <>
-                          <button>수정</button>
-                          <button
-                            onClick={() => handleCancel(reservation._id)}
-                          >
-                            취소
-                          </button>
-                        </>
+                      {canEnterUsageStatus(reservation) && (
+                        <button
+                          className="primary-button"
+                          onClick={() => onUseReservation(reservation._id)}
+                        >
+                          실시간 사용
+                        </button>
                       )}
 
-                      {reservation.status !== "reserved" &&
-                        reservation.status !== "waiting" && (
-                          <button>상세보기</button>
-                        )}
+                      {(reservation.status === "waiting" ||
+                        (reservation.status === "reserved" &&
+                          !isReservationAvailableNow(reservation))) && (
+                        <button
+                          onClick={() => handleCancel(reservation._id)}
+                        >
+                          취소
+                        </button>
+                      )}
+
+                      {(reservation.status === "completed" ||
+                        reservation.status === "cancelled") && (
+                        <button>상세보기</button>
+                      )}
                     </div>
                   </td>
                 </tr>

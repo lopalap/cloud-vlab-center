@@ -32,11 +32,11 @@ export default function Login({
       </TabContainer>
 
       <InputGroup>
-        <label>{role === 'admin' ? '관리자 아이디' : '이메일'}</label>
+        <label>{role === 'admin' ? '관리자 아이디' : '학번'}</label>
         <input 
           type="text" 
-          /* 학생 모드일 때 '이메일을 입력하세요'로 표시되도록 수정 완료 */
-          placeholder={role === 'admin' ? '관리자 아이디 입력' : '이메일을 입력하세요'} 
+          
+          placeholder={role === 'admin' ? '관리자 아이디 입력' : '학번을 입력하세요'} 
           value={loginEmail}
           onChange={(e) => setLoginEmail(e.target.value)}
           required

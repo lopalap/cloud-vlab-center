@@ -6,7 +6,6 @@ import {
   FileText,
   AlertCircle,
   User,
-  MonitorPlay,
   Bell,
 } from "lucide-react";
 
@@ -24,13 +23,13 @@ import "./studentLayout.css";
 
 function StudentLayout({ onLogout }) {
   const [activePage, setActivePage] = useState("dashboard");
+  const [selectedReservationId, setSelectedReservationId] = useState(null);
 
   const menuItems = [
   { id: "dashboard", label: "대시보드", icon: LayoutDashboard },
   { id: "weekly", label: "주간 예약", icon: CalendarDays },
   { id: "apply", label: "예약 신청", icon: FileText },
   { id: "reservations", label: "내 예약 현황", icon: ClipboardList },
-  { id: "usage", label: "실시간 사용", icon: MonitorPlay },
   { id: "notices", label: "공지사항", icon: Bell },
   { id: "issues", label: "이슈 관리", icon: AlertCircle },
   { id: "mypage", label: "마이페이지", icon: User },
@@ -46,14 +45,33 @@ function StudentLayout({ onLogout }) {
              onMovePage={setActivePage}
              />
             );
-    if (activePage === "reservations") return <MyReservations />;
-    if (activePage === "usage") return <UsageStatus />;
+    if (activePage === "reservations")
+        return (
+            <MyReservations
+              onUseReservation={(reservationId) => {
+                setSelectedReservationId(reservationId);
+                setActivePage("usage");
+            }}
+              />
+            );
+    if (activePage === "usage")
+        return (
+            <UsageStatus
+              reservationId={selectedReservationId}
+              onMovePage={setActivePage}
+              />
+            );
     if (activePage === "issues") return <IssuePage />;
     if (activePage === "mypage")
       return <MyPage onLogout={onLogout} onMovePage={setActivePage} />;
 
     if (activePage === "editProfile")
-      return <EditProfile onMovePage={setActivePage} />;
+        return (
+        <EditProfile
+          onMovePage={setActivePage}
+          onLogout={onLogout}
+              />
+            );
     if (activePage === "changePassword")
       return <ChangePassword onMovePage={setActivePage} />;
 

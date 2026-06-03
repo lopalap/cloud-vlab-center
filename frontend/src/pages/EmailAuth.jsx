@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 
-export default function EmailAuth({ setStep }) {
+export default function EmailAuth({ setStep, setVerifiedEmail }) {
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [isSent, setIsSent] = useState(false);
@@ -18,6 +18,7 @@ export default function EmailAuth({ setStep }) {
   const handleVerifyCode = (e) => {
     e.preventDefault();
     if (code === '1234') {
+      setVerifiedEmail(email);
       alert('이메일 인증 성공!');
       setStep('registerInfo'); // 회원가입 정보 입력 창으로 이동
     } else {

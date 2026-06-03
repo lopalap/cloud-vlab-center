@@ -1,11 +1,96 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { getMyProfile } from "../../api/users";
+import { getMyReservations } from "../../api/reservations";
 
 function MyPage({ onLogout, onMovePage }) {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
+  const [profile, setProfile] = useState(null);
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const fetchMyPageData = async () => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        const [profileData, reservationData] = await Promise.all([
+          getMyProfile(),
+          getMyReservations(),
+        ]);
+
+        setProfile(profileData);
+        setReservations(reservationData);
+      } catch (error) {
+        console.error("마이페이지 정보 조회 실패", error);
+        setErrorMessage(
+          error.response?.data?.message ||
+            "마이페이지 정보를 불러오지 못했습니다."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMyPageData();
+  }, []);
 
   const handleNotificationToggle = () => {
     setNotificationEnabled((prev) => !prev);
   };
+
+  const formatCreatedAt = (createdAt) => {
+    if (!createdAt) {
+      return "-";
+    }
+
+    return new Date(createdAt).toLocaleDateString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  };
+
+  const getRoleText = (role) => {
+    if (role === "admin") {
+      return "관리자";
+    }
+
+    return "학생 사용자";
+  };
+
+  const getAvatarText = () => {
+    if (!profile?.name) {
+      return "U";
+    }
+
+    return profile.name.slice(0, 1);
+  };
+
+  const completedCount = reservations.filter(
+    (reservation) => reservation.status === "completed"
+  ).length;
+
+  const activeCount = reservations.filter(
+    (reservation) =>
+      reservation.status === "waiting" ||
+      reservation.status === "reserved" ||
+      reservation.status === "using"
+  ).length;
+
+  if (loading) {
+    return (
+      <>
+        <section className="page-header">
+          <div>
+            <h1>마이페이지</h1>
+            <p>내 계정 정보를 불러오는 중입니다.</p>
+          </div>
+        </section>
+      </>
+    );
+  }
 
   return (
     <>
@@ -16,28 +101,33 @@ function MyPage({ onLogout, onMovePage }) {
         </div>
       </section>
 
+      {errorMessage && (
+        <p style={{ color: "#dc2626", marginBottom: "20px" }}>
+          {errorMessage}
+        </p>
+      )}
+
       <section className="mypage-layout">
         <div className="profile-card">
-          <div className="profile-avatar">CS</div>
+          <div className="profile-avatar">{getAvatarText()}</div>
 
-          <h2>홍길동</h2>
-          <p>20201234</p>
-          <span>컴퓨터공학과</span>
+          <h2>{profile?.name || "-"}</h2>
+          <p>{profile?.student_id || "-"}</p>
 
           <div className="profile-info-list">
             <div>
               <strong>이메일</strong>
-              <p>student@example.com</p>
+              <p>{profile?.email || "-"}</p>
             </div>
 
             <div>
               <strong>권한</strong>
-              <p>학생 사용자</p>
+              <p>{getRoleText(profile?.role)}</p>
             </div>
 
             <div>
               <strong>가입일</strong>
-              <p>2025-03-02</p>
+              <p>{formatCreatedAt(profile?.createdAt)}</p>
             </div>
           </div>
         </div>
@@ -52,19 +142,19 @@ function MyPage({ onLogout, onMovePage }) {
             <div className="mypage-stats">
               <div>
                 <p>전체 예약</p>
-                <strong>12</strong>
+                <strong>{reservations.length}</strong>
               </div>
               <div>
                 <p>사용 완료</p>
-                <strong>8</strong>
+                <strong>{completedCount}</strong>
               </div>
               <div>
                 <p>진행 중</p>
-                <strong>1</strong>
+                <strong>{activeCount}</strong>
               </div>
               <div>
                 <p>등록 이슈</p>
-                <strong>3</strong>
+                <strong>-</strong>
               </div>
             </div>
           </div>
@@ -82,35 +172,38 @@ function MyPage({ onLogout, onMovePage }) {
               >
                 개인 정보 수정
               </button>
-              <button
-                type="button"
-                onClick={() => onMovePage("changePassword")}
-                >
-                 비밀번호 변경
-              </button>
-              <div className="notification-setting-item">
-              <span>브라우저 알림</span>
 
               <button
                 type="button"
-                className={`notification-toggle ${
-                notificationEnabled ? "enabled" : ""
-                }`}
-                onClick={handleNotificationToggle}
-                aria-label="브라우저 알림 설정 변경"
-                aria-pressed={notificationEnabled}
-                >
-              <span className="toggle-label">
-                {notificationEnabled ? "ON" : "OFF"}
-              </span>
-              <span className="toggle-circle"></span>
+                onClick={() => onMovePage("changePassword")}
+              >
+                비밀번호 변경
               </button>
-            </div>
+
+              <div className="notification-setting-item">
+                <span>브라우저 알림</span>
+
+                <button
+                  type="button"
+                  className={`notification-toggle ${
+                    notificationEnabled ? "enabled" : ""
+                  }`}
+                  onClick={handleNotificationToggle}
+                  aria-label="브라우저 알림 설정 변경"
+                  aria-pressed={notificationEnabled}
+                >
+                  <span className="toggle-label">
+                    {notificationEnabled ? "ON" : "OFF"}
+                  </span>
+                  <span className="toggle-circle"></span>
+                </button>
+              </div>
+
               <button
                 type="button"
                 className="danger-setting"
                 onClick={onLogout}
-                  >
+              >
                 로그아웃
               </button>
             </div>

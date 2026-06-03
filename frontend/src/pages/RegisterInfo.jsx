@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import { register } from '../api/auth';
 
-export default function RegisterInfo({ setStep }) {
+export default function RegisterInfo({ setStep, email }) {
   const [dept, setDept] = useState('');
   const [studentId, setStudentId] = useState('');
   const [name, setName] = useState('');
@@ -10,22 +11,34 @@ export default function RegisterInfo({ setStep }) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
-  const handleRegisterSubmit = (e) => {
-    e.preventDefault();
+ const handleRegisterSubmit = async (e) => {
+  e.preventDefault();
 
-    // 1. 정보를 입력하지 않아도 임시 통과가 가능하도록 예외 허용 로직 처리
-    // 단, 비밀번호 란에 무언가 입력했을 때만 일치 확인 벨리데이션 검사 수행
-    if (password || confirmPassword) {
-      if (password !== confirmPassword) {
-        alert('회원가입 실패\n이유: 비밀번호가 서로 일치하지 않습니다.');
-        return;
-      }
-    }
+  if (!name.trim() || !studentId.trim() || !password.trim() || !confirmPassword.trim()) {
+    alert('이름, 학번, 비밀번호를 모두 입력해 주세요.');
+    return;
+  }
 
-    // 2. 일치하거나 아예 비워둔 채 완료를 누른 경우 통과
-    alert('회원가입 성공!');
-    setStep('login'); // 성공 후 로그인 페이지로 리다이렉트
-  };
+  if (!email) {
+    alert('인증된 이메일 정보가 없습니다. 이메일 인증부터 다시 진행해 주세요.');
+    setStep('emailAuth');
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    alert('회원가입 실패\n이유: 비밀번호가 서로 일치하지 않습니다.');
+    return;
+  }
+
+  try {
+    await register(name.trim(), studentId.trim(), email, password);
+    alert('회원가입이 완료되었습니다. 생성한 학번과 비밀번호로 로그인해 주세요.');
+    setStep('login');
+  } catch (err) {
+    console.error('회원가입 실패:', err);
+    alert(err.response?.data?.message || '회원가입에 실패했습니다.');
+  }
+};
 
   return (
     <Form onSubmit={handleRegisterSubmit}>

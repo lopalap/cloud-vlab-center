@@ -1,12 +1,50 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import {
+  getMyProfile,
+  updateMyProfile,
+  deleteMyAccount,
+} from "../../api/users";
 
-function EditProfile({ onMovePage }) {
+function EditProfile({ onMovePage, onLogout }) {
   const [formData, setFormData] = useState({
-    name: "홍길동",
-    studentId: "20201234",
-    department: "컴퓨터공학과",
-    email: "student@example.com",
+    name: "",
+    student_id: "",
+    email: "",
+    role: "",
   });
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        const data = await getMyProfile();
+
+        setFormData({
+          name: data.name || "",
+          student_id: data.student_id || "",
+          email: data.email || "",
+          role: data.role || "",
+        });
+      } catch (error) {
+        console.error("개인정보 조회 실패", error);
+        setErrorMessage(
+          error.response?.data?.message ||
+            "개인정보를 불러오지 못했습니다."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
 
   const handleChange = (event) => {
     const { name, value } = event.target;
@@ -17,22 +55,89 @@ function EditProfile({ onMovePage }) {
     }));
   };
 
-  const handleSave = (event) => {
+  const getRoleText = (role) => {
+    if (role === "admin") {
+      return "관리자";
+    }
+
+    return "학생 사용자";
+  };
+
+  const handleSave = async (event) => {
     event.preventDefault();
 
-    alert("개인정보 수정 기능은 백엔드 API 연동 후 저장됩니다.");
-    onMovePage("mypage");
-  };
+    if (!formData.name.trim()) {
+      setErrorMessage("이름을 입력해주세요.");
+      return;
+    }
 
-  const handleWithdraw = () => {
-    const isConfirmed = window.confirm(
-      "정말 회원탈퇴를 진행하시겠습니까?\n탈퇴 후에는 계정과 예약 정보를 복구할 수 없습니다."
-    );
+    if (!formData.email.trim()) {
+      setErrorMessage("이메일을 입력해주세요.");
+      return;
+    }
 
-    if (isConfirmed) {
-      alert("회원탈퇴 기능은 백엔드 API 연동 후 처리됩니다.");
+    try {
+      setSaving(true);
+      setErrorMessage("");
+
+      await updateMyProfile({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+      });
+
+      alert("개인정보가 수정되었습니다.");
+      onMovePage("mypage");
+    } catch (error) {
+      console.error("개인정보 수정 실패", error);
+      setErrorMessage(
+        error.response?.data?.message ||
+          "개인정보 수정에 실패했습니다."
+      );
+    } finally {
+      setSaving(false);
     }
   };
+
+  const handleWithdraw = async () => {
+    const isConfirmed = window.confirm(
+      "정말 회원탈퇴를 진행하시겠습니까?\n탈퇴 후에는 계정과 예약 정보를 확인할 수 없습니다."
+    );
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    try {
+      setWithdrawing(true);
+      setErrorMessage("");
+
+      await deleteMyAccount();
+
+      alert("회원탈퇴가 완료되었습니다.");
+      onLogout();
+    } catch (error) {
+      console.error("회원탈퇴 실패", error);
+      setErrorMessage(
+        error.response?.data?.message ||
+          "회원탈퇴 처리에 실패했습니다."
+      );
+    } finally {
+      setWithdrawing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <>
+        <section className="page-header">
+          <div>
+            <h1>개인정보 수정</h1>
+            <p>계정 정보를 불러오는 중입니다.</p>
+          </div>
+        </section>
+      </>
+    );
+  }
 
   return (
     <>
@@ -43,11 +148,17 @@ function EditProfile({ onMovePage }) {
         </div>
       </section>
 
+      {errorMessage && (
+        <p style={{ color: "#dc2626", marginBottom: "20px" }}>
+          {errorMessage}
+        </p>
+      )}
+
       <section className="edit-profile-layout">
         <form className="edit-profile-card" onSubmit={handleSave}>
           <div className="card-header">
             <h2>기본 정보</h2>
-            <p>수정할 정보를 입력한 뒤 변경사항을 저장하세요.</p>
+            <p>이름과 이메일을 수정할 수 있습니다.</p>
           </div>
 
           <div className="form-grid edit-profile-form">
@@ -63,24 +174,24 @@ function EditProfile({ onMovePage }) {
             </div>
 
             <div className="form-group">
-              <label htmlFor="studentId">학번</label>
+              <label htmlFor="student_id">학번</label>
               <input
-                id="studentId"
-                name="studentId"
+                id="student_id"
+                name="student_id"
                 type="text"
-                value={formData.studentId}
-                onChange={handleChange}
+                value={formData.student_id}
+                disabled
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="department">학과</label>
+              <label htmlFor="role">권한</label>
               <input
-                id="department"
-                name="department"
+                id="role"
+                name="role"
                 type="text"
-                value={formData.department}
-                onChange={handleChange}
+                value={getRoleText(formData.role)}
+                disabled
               />
             </div>
 
@@ -101,12 +212,17 @@ function EditProfile({ onMovePage }) {
               type="button"
               className="cancel-button"
               onClick={() => onMovePage("mypage")}
+              disabled={saving || withdrawing}
             >
               취소
             </button>
 
-            <button type="submit" className="primary-button">
-              변경사항 저장
+            <button
+              type="submit"
+              className="primary-button"
+              disabled={saving || withdrawing}
+            >
+              {saving ? "저장 중..." : "변경사항 저장"}
             </button>
           </div>
         </form>
@@ -124,8 +240,9 @@ function EditProfile({ onMovePage }) {
             type="button"
             className="withdraw-button"
             onClick={handleWithdraw}
+            disabled={saving || withdrawing}
           >
-            회원 탈퇴
+            {withdrawing ? "처리 중..." : "회원 탈퇴"}
           </button>
         </div>
       </section>

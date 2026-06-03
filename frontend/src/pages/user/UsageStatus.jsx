@@ -1,53 +1,187 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import {
+  getReservationById,
+  startReservation,
+  endReservation,
+} from "../../api/reservations";
 
-function UsageStatus() {
-  const [usageStatus, setUsageStatus] = useState("waiting");
-  const [startTime, setStartTime] = useState("-");
-  const [endTime, setEndTime] = useState("-");
+function UsageStatus({ reservationId, onMovePage }) {
+  const [reservation, setReservation] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const resource = {
-    name: "Server-A-01",
-    nodeName: "Server-A-01",
-    category: "GPU Server",
-    spec: "RTX 4090 / 64GB",
-    reservedTime: "09:00 ~ 11:00",
-    ip: "192.168.0.15",
-    port: "30001",
-    accessType: "SSH",
-    sshCommand: "ssh student@192.168.0.15 -p 30001",
-};
+  const fetchReservation = async () => {
+    if (!reservationId) {
+      setLoading(false);
+      setErrorMessage("선택된 예약 정보가 없습니다.");
+      return;
+    }
 
-  const handleStart = () => {
-    const now = new Date();
-    const time = now.toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    try {
+      setLoading(true);
+      setErrorMessage("");
 
-    setUsageStatus("using");
-    setStartTime(time);
-    setEndTime("-");
-    alert("사용을 시작했습니다.");
+      const data = await getReservationById(reservationId);
+      setReservation(data);
+    } catch (error) {
+      console.error("예약 상세 조회 실패", error);
+      setErrorMessage(
+        error.response?.data?.message || "예약 정보를 불러오지 못했습니다."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleComplete = () => {
-    const now = new Date();
-    const time = now.toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  useEffect(() => {
+    fetchReservation();
+  }, [reservationId]);
 
-    setUsageStatus("completed");
-    setEndTime(time);
-    alert("사용을 완료했습니다.");
+  const handleStart = async () => {
+    if (!reservationId) {
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      setErrorMessage("");
+
+      await startReservation(reservationId);
+      alert("사용을 시작했습니다.");
+      await fetchReservation();
+    } catch (error) {
+      console.error("사용 시작 실패", error);
+      setErrorMessage(
+        error.response?.data?.message || "사용 시작에 실패했습니다."
+      );
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const getStatusText = () => {
-    if (usageStatus === "waiting") return "예약됨";
-    if (usageStatus === "using") return "사용중";
-    if (usageStatus === "completed") return "완료";
-  return "예약됨";
-};
+  const handleComplete = async () => {
+    if (!reservationId) {
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      setErrorMessage("");
+
+      await endReservation(reservationId);
+      alert("사용을 완료했습니다.");
+      await fetchReservation();
+    } catch (error) {
+      console.error("사용 완료 실패", error);
+      setErrorMessage(
+        error.response?.data?.message || "사용 완료에 실패했습니다."
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const getStatusText = (status) => {
+    if (status === "waiting") return "대기중";
+    if (status === "reserved") return "예약됨";
+    if (status === "using") return "사용중";
+    if (status === "completed") return "완료";
+    if (status === "cancelled") return "취소됨";
+    return "-";
+  };
+
+  const formatSpec = (spec) => {
+    if (!spec) {
+      return "-";
+    }
+
+    if (typeof spec === "string") {
+      return spec;
+    }
+
+    const details = [
+      spec.gpu,
+      spec.cpu,
+      spec.memory,
+      spec.storage,
+    ].filter(Boolean);
+
+    return details.length > 0 ? details.join(" / ") : spec.description || "-";
+  };
+
+  const formatReservedTime = (startTime, endTime) => {
+    if (!startTime || !endTime) {
+      return "-";
+    }
+
+    const start = new Date(startTime).toLocaleString("ko-KR", {
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    const end = new Date(endTime).toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    return `${start} ~ ${end}`;
+  };
+
+  const formatActualTime = (time) => {
+    if (!time) {
+      return "-";
+    }
+
+    return new Date(time).toLocaleTimeString("ko-KR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="page-container">
+        <div className="page-header">
+          <h1>실시간 사용 관리</h1>
+          <p>예약 정보를 불러오는 중입니다.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (errorMessage || !reservation) {
+    return (
+      <div className="page-container">
+        <div className="page-header">
+          <h1>실시간 사용 관리</h1>
+          <p>예약한 실습 자원의 실제 사용 상태를 관리하세요.</p>
+        </div>
+
+        <section className="content-card usage-main-card">
+          <p style={{ color: "#dc2626" }}>
+            {errorMessage || "예약 정보가 없습니다."}
+          </p>
+
+          <div className="usage-button-area">
+            <button
+              className="cancel-button"
+              onClick={() => onMovePage("reservations")}
+            >
+              내 예약 현황으로 돌아가기
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  const resource = reservation.resource_id;
 
   return (
     <div className="page-container">
@@ -63,58 +197,85 @@ function UsageStatus() {
               <h2>현재 예약 자원</h2>
               <p>사용 시작과 사용 완료 상태를 직접 변경할 수 있습니다.</p>
             </div>
-            <span className={`usage-status-badge ${usageStatus}`}>
-              {getStatusText()}
+            <span className={`usage-status-badge ${reservation.status}`}>
+              {getStatusText(reservation.status)}
             </span>
           </div>
 
           <div className="resource-info-grid">
             <div className="resource-info-item">
               <span>이름</span>
-              <strong>{resource.name}</strong>
+              <strong>{resource?.name || "-"}</strong>
             </div>
+
             <div className="resource-info-item">
               <span>노드 이름</span>
-              <strong>{resource.nodeName}</strong>
+              <strong>{resource?.name || "-"}</strong>
             </div>
+
             <div className="resource-info-item">
               <span>자원 분류</span>
-              <strong>{resource.category}</strong>
+              <strong>{resource?.lab_id || "-"}</strong>
             </div>
+
             <div className="resource-info-item">
               <span>스펙</span>
-              <strong>{resource.spec}</strong>
+              <strong>{formatSpec(resource?.spec)}</strong>
             </div>
+
             <div className="resource-info-item">
               <span>예약 시간</span>
-              <strong>{resource.reservedTime}</strong>
+              <strong>
+                {formatReservedTime(
+                  reservation.start_time,
+                  reservation.end_time
+                )}
+              </strong>
             </div>
+
             <div className="resource-info-item">
               <span>현재 상태</span>
-              <strong>{getStatusText()}</strong>
+              <strong>{getStatusText(reservation.status)}</strong>
             </div>
+
             <div className="resource-info-item">
               <span>실제 사용 시작</span>
-              <strong>{startTime}</strong>
+              <strong>{formatActualTime(reservation.actual_start_time)}</strong>
             </div>
+
             <div className="resource-info-item">
               <span>실제 사용 완료</span>
-              <strong>{endTime}</strong>
+              <strong>{formatActualTime(reservation.actual_end_time)}</strong>
             </div>
           </div>
 
+          {errorMessage && (
+            <p style={{ color: "#dc2626", marginTop: "16px" }}>
+              {errorMessage}
+            </p>
+          )}
+
           <div className="usage-button-area">
+            <button
+              className="cancel-button"
+              onClick={() => onMovePage("reservations")}
+              disabled={actionLoading}
+            >
+              돌아가기
+            </button>
+
             <button
               className="primary-button"
               onClick={handleStart}
-              disabled={usageStatus === "using" || usageStatus === "completed"}
+              disabled={reservation.status !== "reserved" || actionLoading}
             >
-              사용 시작
+              {actionLoading ? "처리 중..." : "사용 시작"}
             </button>
+
             <button
               className="secondary-button"
               onClick={handleComplete}
-              disabled={usageStatus !== "using"}
+              disabled={reservation.status !== "using" || actionLoading}
             >
               사용 완료
             </button>
@@ -124,27 +285,27 @@ function UsageStatus() {
         <section className="content-card">
           <h2>접속 정보</h2>
           <p className="card-description">
-            예약한 자원에 접속하기 위한 기본 정보입니다.
+            Docker 접속 정보는 추후 API 연동 후 표시됩니다.
           </p>
 
           <div className="access-info-list">
             <div>
               <span>IP 주소</span>
-              <strong>{resource.ip}</strong>
+              <strong>-</strong>
             </div>
             <div>
               <span>포트 번호</span>
-              <strong>{resource.port}</strong>
+              <strong>-</strong>
             </div>
             <div>
               <span>접속 방식</span>
-              <strong>{resource.accessType}</strong>
+              <strong>-</strong>
             </div>
           </div>
 
           <div className="ssh-box">
             <span>SSH 접속 명령어</span>
-            <code>{resource.sshCommand}</code>
+            <code>접속 정보 연동 예정</code>
           </div>
         </section>
       </div>
