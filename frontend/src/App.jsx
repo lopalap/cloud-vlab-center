@@ -6,7 +6,7 @@ import RegisterInfo from './pages/RegisterInfo';
 import Home from './pages/Home';
 import StudentLayout from './pages/user/StudentLayout';
 import AdminLayout from './pages/admin/AdminLayout';
-import { login, logout as logoutApi } from './api/auth';
+import { login, logout as logoutApi, getRoleFromAccessToken } from './api/auth';
 
 export default function App() {
   const [step, setStep] = useState('login');
@@ -21,28 +21,48 @@ export default function App() {
 
   // 학생 / 관리자 실제 로그인 API 연동
   const handleLogin = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  const idLabel = role === 'admin' ? '관리자 아이디' : '학번';
+    const idLabel = role === 'admin' ? '관리자 아이디' : '학번';
 
-  if (!loginEmail.trim() || !loginPassword.trim()) {
-    alert(`${idLabel}와 비밀번호를 입력해 주세요.`);
-    return;
-  }
+    if (!loginEmail.trim() || !loginPassword.trim()) {
+      alert(`${idLabel}와 비밀번호를 입력해 주세요.`);
+      return;
+    }
 
-  try {
-    await login(loginEmail.trim(), loginPassword);
+    try {
+      const loginData = await login(loginEmail.trim(), loginPassword);
+      const actualRole = getRoleFromAccessToken(loginData.accessToken);
 
-    alert(role === 'admin' ? '관리자 로그인 성공!' : '학생 로그인 성공!');
-    setStep('home');
-  } catch (err) {
-    console.error('로그인 실패:', err);
-    alert(
-      err.response?.data?.message ||
-      `${idLabel} 또는 비밀번호가 올바르지 않습니다.`
-    );
-  }
-};
+      if (!actualRole) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        alert('로그인 권한 정보를 확인할 수 없습니다.');
+        return;
+      }
+
+      if (actualRole !== role) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+
+        alert(
+          role === 'admin'
+            ? '관리자 계정만 관리자 화면에 로그인할 수 있습니다.'
+            : '학생 계정만 학생 화면에 로그인할 수 있습니다.'
+        );
+        return;
+      }
+
+      alert(role === 'admin' ? '관리자 로그인 성공!' : '학생 로그인 성공!');
+      setStep('home');
+    } catch (err) {
+      console.error('로그인 실패:', err);
+      alert(
+        err.response?.data?.message ||
+        `${idLabel} 또는 비밀번호가 올바르지 않습니다.`
+      );
+    }
+  };
 
   // 실제 토큰 사용에 맞춰 로그아웃 시 저장 토큰 제거
   const handleLogout = async () => {

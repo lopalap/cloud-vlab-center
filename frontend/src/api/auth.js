@@ -1,17 +1,39 @@
 import api from "./axios";
 
+// access token 안에 들어 있는 사용자 role 읽기
+export const getRoleFromAccessToken = (accessToken) => {
+  try {
+    const payload = accessToken.split(".")[1];
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedBase64 = base64.padEnd(
+      Math.ceil(base64.length / 4) * 4,
+      "="
+    );
+
+    const decodedPayload = JSON.parse(atob(paddedBase64));
+    return decodedPayload.role;
+  } catch (err) {
+    console.error("토큰 role 확인 실패:", err);
+    return null;
+  }
+};
+
 // 로그인
 export const login = async (student_id, password) => {
   const res = await api.post("/api/auth/login", { student_id, password });
+
   localStorage.setItem("accessToken", res.data.accessToken);
   localStorage.setItem("refreshToken", res.data.refreshToken);
+
   return res.data;
 };
 
 // 로그아웃
 export const logout = async () => {
   const refreshToken = localStorage.getItem("refreshToken");
+
   await api.post("/api/auth/logout", { refreshToken });
+
   localStorage.removeItem("accessToken");
   localStorage.removeItem("refreshToken");
 };
@@ -24,5 +46,6 @@ export const register = async (name, student_id, email, password) => {
     email,
     password,
   });
+
   return res.data;
 };
