@@ -18,14 +18,16 @@ export const createResource = async (resource) => {
   return res.data;
 };
 
-// 리소스 수정
+// 리소스 정보 수정
 export const updateResource = async (id, resource) => {
   const res = await api.patch(`/api/resources/${id}`, resource);
   return res.data;
 };
 
-// 리소스 삭제
-export const deleteResource = async (id) => {
-  const res = await api.delete(`/api/resources/${id}`);
+// 리소스 상태 변경: active / maintenance / retired
+export const updateResourceStatus = async (id, status) => {
+  const res = await api.patch(`/api/resources/${id}/status`, {
+    status,
+  });
   return res.data;
 };

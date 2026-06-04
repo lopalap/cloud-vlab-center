@@ -58,13 +58,17 @@ function ReservationApply({ onMovePage }) {
       resource.spec?.gpu,
       resource.spec?.cpu,
       resource.spec?.memory,
+      resource.spec?.storage,
     ].filter(Boolean);
 
-    const specText = details.length > 0 ? details.join(" / ") : "사양 정보 없음";
+    const specText =
+      details.length > 0
+        ? details.join(" / ")
+        : resource.spec?.description || "사양 정보 없음";
 
     return `${resource.name} / ${resource.lab_id} / ${specText}`;
   };
-
+  
   const handleSubmit = async () => {
     if (!form.resource_id) {
       setErrorMessage("예약할 자원을 선택해주세요.");
