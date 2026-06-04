@@ -1,6 +1,51 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getNotices } from "../../api/notices";
 
 function StudentDashboard({ onMovePage }) {
+  const [notices, setNotices] = useState([]);
+  const [loadingNotices, setLoadingNotices] = useState(true);
+  const [noticeError, setNoticeError] = useState("");
+
+  useEffect(() => {
+    const fetchNotices = async () => {
+      try {
+        setLoadingNotices(true);
+        setNoticeError("");
+
+        const data = await getNotices();
+        setNotices(Array.isArray(data) ? data.slice(0, 3) : []);
+      } catch (error) {
+        console.error("대시보드 공지사항 조회 실패", error);
+        setNoticeError(
+          error.response?.data?.message ||
+            "공지사항을 불러오지 못했습니다."
+        );
+      } finally {
+        setLoadingNotices(false);
+      }
+    };
+
+    fetchNotices();
+  }, []);
+
+  const formatNoticeDate = (dateValue) => {
+    if (!dateValue) return "-";
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) {
+      return "-";
+    }
+
+    return date
+      .toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+      .replace(/ /g, "");
+  };
+
   return (
     <>
       <section className="page-header">
@@ -135,33 +180,42 @@ function StudentDashboard({ onMovePage }) {
             </div>
 
             <div className="notice-preview-list">
-              <div className="notice-preview-item">
-                <div>
-                  <strong>
-                    AI 융합 전산 GPU 노드(Server-A-01) 리소스 확충 안내
-                  </strong>
-                  <p>2026-05-10 · 조회수 204</p>
+              {loadingNotices ? (
+                <div className="notice-preview-item">
+                  <div>
+                    <p>공지사항을 불러오는 중입니다.</p>
+                  </div>
                 </div>
-                <span className="notice-preview-badge">공지</span>
-              </div>
+              ) : noticeError ? (
+                <div className="notice-preview-item">
+                  <div>
+                    <p style={{ color: "#dc2626" }}>{noticeError}</p>
+                  </div>
+                </div>
+              ) : notices.length === 0 ? (
+                <div className="notice-preview-item">
+                  <div>
+                    <p>등록된 공지사항이 없습니다.</p>
+                  </div>
+                </div>
+              ) : (
+                notices.map((notice) => (
+                  <div key={notice._id} className="notice-preview-item">
+                    <div>
+                      <strong>{notice.title}</strong>
+                      <p>{formatNoticeDate(notice.createdAt)}</p>
+                    </div>
 
-              <div className="notice-preview-item">
-                <div>
-                  <strong>
-                    [긴급] 내부 백본 스위치 교체 작업으로 인한 서비스 일시 중단 안내
-                  </strong>
-                  <p>2026-04-15 · 조회수 89</p>
-                </div>
-                <span className="notice-preview-badge urgent">긴급</span>
-              </div>
-
-              <div className="notice-preview-item">
-                <div>
-                  <strong>2026학년도 1학기 가상 실습실 이용 수칙 안내</strong>
-                  <p>2026-03-02 · 조회수 142</p>
-                </div>
-                <span className="notice-preview-badge">공지</span>
-              </div>
+                    <span
+                      className={`notice-preview-badge ${
+                        notice.is_urgent ? "urgent" : ""
+                      }`}
+                    >
+                      {notice.is_urgent ? "긴급" : "공지"}
+                    </span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

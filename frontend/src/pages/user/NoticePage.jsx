@@ -1,44 +1,57 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getNotices } from "../../api/notices";
 
 function NoticePage() {
-  const notices = [
-    {
-      id: 1,
-      type: "점검",
-      title: "Docker 실습 자원 점검 안내",
-      date: "2026.05.23",
-      content:
-        "오늘 18:00부터 19:00까지 Docker 기반 실습 자원 점검이 예정되어 있습니다. 해당 시간에는 일부 자원 접속이 제한될 수 있습니다.",
-      important: true,
-    },
-    {
-      id: 2,
-      type: "안내",
-      title: "실습 자원 사용 완료 버튼 안내",
-      date: "2026.05.23",
-      content:
-        "예약한 자원을 다 사용한 경우 반드시 실시간 사용 관리 화면에서 사용 완료 버튼을 눌러주세요. 사용 완료 처리를 해야 다른 사용자가 자원을 효율적으로 이용할 수 있습니다.",
-      important: false,
-    },
-    {
-      id: 3,
-      type: "예약",
-      title: "예약 가능 시간 정책 안내",
-      date: "2026.05.22",
-      content:
-        "동일 사용자는 하루 최대 2시간까지 실습 자원을 예약할 수 있습니다. 장시간 사용이 필요한 경우 관리자에게 문의해주세요.",
-      important: false,
-    },
-    {
-      id: 4,
-      type: "주의",
-      title: "GPU 서버 이용 시 주의사항",
-      date: "2026.05.21",
-      content:
-        "GPU 서버 사용 중 임의로 시스템 설정을 변경하거나 장시간 미사용 상태로 방치하지 않도록 주의해주세요.",
-      important: false,
-    },
-  ];
+  const [notices, setNotices] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const fetchNotices = async () => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
+        const data = await getNotices();
+        setNotices(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("공지사항 목록 조회 실패", error);
+        setErrorMessage(
+          error.response?.data?.message ||
+            "공지사항을 불러오지 못했습니다."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchNotices();
+  }, []);
+
+  const formatDate = (dateValue) => {
+    if (!dateValue) return "-";
+
+    const date = new Date(dateValue);
+
+    if (Number.isNaN(date.getTime())) {
+      return "-";
+    }
+
+    return date
+      .toLocaleDateString("ko-KR", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+      .replace(/ /g, "");
+  };
+
+  const getNoticeType = (notice) => {
+    return notice.is_urgent ? "긴급" : "안내";
+  };
+
+  const latestNoticeDate =
+    notices.length > 0 ? formatDate(notices[0].createdAt) : "-";
 
   return (
     <div className="page-container">
@@ -61,39 +74,59 @@ function NoticePage() {
             </div>
             <div>
               <span>중요 공지</span>
-              <strong>{notices.filter((notice) => notice.important).length}</strong>
+              <strong>
+                {notices.filter((notice) => notice.is_urgent).length}
+              </strong>
             </div>
             <div>
               <span>최근 등록</span>
-              <strong>{notices[0].date}</strong>
+              <strong>{latestNoticeDate}</strong>
             </div>
           </div>
         </section>
 
         <section className="notice-list">
-          {notices.map((notice) => (
-            <article
-              key={notice.id}
-              className={`content-card notice-card ${
-                notice.important ? "important" : ""
-              }`}
-            >
-              <div className="notice-card-header">
-                <div>
-                  <div className="notice-meta">
-                    <span className="notice-type">{notice.type}</span>
-                    <span>{notice.date}</span>
-                    {notice.important && (
-                      <span className="notice-important">중요</span>
-                    )}
-                  </div>
-                  <h2>{notice.title}</h2>
-                </div>
-              </div>
-
-              <p>{notice.content}</p>
+          {loading ? (
+            <article className="content-card notice-card">
+              <p>공지사항을 불러오는 중입니다.</p>
             </article>
-          ))}
+          ) : errorMessage ? (
+            <article className="content-card notice-card">
+              <p style={{ color: "#dc2626" }}>{errorMessage}</p>
+            </article>
+          ) : notices.length === 0 ? (
+            <article className="content-card notice-card">
+              <p>등록된 공지사항이 없습니다.</p>
+            </article>
+          ) : (
+            notices.map((notice) => (
+              <article
+                key={notice._id}
+                className={`content-card notice-card ${
+                  notice.is_urgent ? "important" : ""
+                }`}
+              >
+                <div className="notice-card-header">
+                  <div>
+                    <div className="notice-meta">
+                      <span className="notice-type">
+                        {getNoticeType(notice)}
+                      </span>
+                      <span>{formatDate(notice.createdAt)}</span>
+
+                      {notice.is_urgent && (
+                        <span className="notice-important">중요</span>
+                      )}
+                    </div>
+
+                    <h2>{notice.title}</h2>
+                  </div>
+                </div>
+
+                <p>{notice.content}</p>
+              </article>
+            ))
+          )}
         </section>
       </div>
     </div>
