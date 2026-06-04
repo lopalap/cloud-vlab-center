@@ -1,74 +1,202 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
+import {
+  getReservations,
+  approveReservation,
+  rejectReservation,
+  endReservation,
+} from '../../api/reservations';
 
-const INITIAL_RESERVATIONS = [
-  { id: 1, name: '임승재', studentId: '202612345', lab: '가상 실습실 A', bench: '03번 좌석', time: '14:00 ~ 16:00', status: '대기중' },
-  { id: 2, name: '김철수', studentId: '202654321', lab: '가상 실습실 B', bench: '12번 좌석', time: '09:00 ~ 12:00', status: '사용중' },
-  { id: 3, name: '이영희', studentId: '202698765', lab: '가상 실습실 A', bench: '01번 좌석', time: '13:00 ~ 15:00', status: '취소됨' },
-  { id: 4, name: '박민수', studentId: '202645678', lab: '가상 실습실 C', bench: '07번 좌석', time: '10:00 ~ 12:00', status: '완료' },
-  { id: 5, name: '최지우', studentId: '202611223', lab: '가상 실습실 B', bench: '05번 좌석', time: '16:00 ~ 18:00', status: '대기중' },
-  { id: 6, name: '정민재', studentId: '202633445', lab: '가상 실습실 A', bench: '09번 좌석', time: '18:00 ~ 20:00', status: '사용중' },
-  { id: 7, name: '홍길동', studentId: '202611111', lab: '가상 실습실 C', bench: '02번 좌석', time: '11:00 ~ 13:00', status: '예약됨' },
-];
+const STATUS_LABELS = {
+  waiting: '대기중',
+  reserved: '예약됨',
+  using: '사용중',
+  cancelled: '취소됨',
+  completed: '완료',
+};
 
 export default function Reservation() {
   const tabs = ['전체 예약', '승인/예약 대기', '사용중', '취소된 예약', '완료'];
+
   const [activeTab, setActiveTab] = useState('전체 예약');
-  const [reservations, setReservations] = useState(INITIAL_RESERVATIONS);
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const handleApprove = (id) => {
-    setReservations(prev =>
-      prev.map(item => item.id === id ? { ...item, status: '예약됨' } : item)
-    );
-    alert('예약이 승인되어 [예약됨] 상태로 변경되었습니다.');
+  const getStatusLabel = (status) => {
+    return STATUS_LABELS[status] || status || '-';
   };
 
-  const handleReject = (id) => {
-    setReservations(prev =>
-      prev.map(item => item.id === id ? { ...item, status: '취소됨' } : item)
-    );
-    alert('예약이 거절되어 [취소됨] 상태로 변경되었습니다.');
+  const formatReservationTime = (startTime, endTime) => {
+    if (!startTime || !endTime) return '-';
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return '-';
+    }
+
+    const date = start.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    const startText = start.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+
+    const endText = end.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+
+    return `${date} ${startText} ~ ${endText}`;
   };
 
-  const filteredReservations = reservations.filter(item => {
+  const loadReservations = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      const data = await getReservations();
+      setReservations(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('관리자 예약 목록 조회 실패:', err);
+      setError(
+        err.response?.data?.message ||
+        '예약 목록을 불러오지 못했습니다.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadReservations();
+  }, []);
+
+  const handleApprove = async (id) => {
+    try {
+      await approveReservation(id);
+      alert('예약이 승인되어 [예약됨] 상태로 변경되었습니다.');
+      await loadReservations();
+    } catch (err) {
+      console.error('예약 승인 실패:', err);
+      alert(
+        err.response?.data?.message ||
+        '예약 승인 처리에 실패했습니다.'
+      );
+    }
+  };
+
+  const handleReject = async (id) => {
+    const reason = window.prompt(
+      '거절 사유를 입력해 주세요.',
+      '관리자에 의해 거절되었습니다.'
+    );
+
+    if (reason === null) {
+      return;
+    }
+
+    try {
+      await rejectReservation(id, reason.trim());
+      alert('예약이 거절되어 [취소됨] 상태로 변경되었습니다.');
+      await loadReservations();
+    } catch (err) {
+      console.error('예약 거절 실패:', err);
+      alert(
+        err.response?.data?.message ||
+        '예약 거절 처리에 실패했습니다.'
+      );
+    }
+  };
+
+  const handleForceEnd = async (id) => {
+    const confirmed = window.confirm(
+      '사용 중인 예약을 강제 회수하여 완료 처리하시겠습니까?'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await endReservation(id);
+      alert('사용 중인 예약이 [완료] 상태로 변경되었습니다.');
+      await loadReservations();
+    } catch (err) {
+      console.error('강제 회수 실패:', err);
+      alert(
+        err.response?.data?.message ||
+        '강제 회수 처리에 실패했습니다.'
+      );
+    }
+  };
+
+  const filteredReservations = reservations.filter((item) => {
     if (activeTab === '전체 예약') return true;
-    if (activeTab === '승인/예약 대기') return item.status === '대기중' || item.status === '예약됨';
-    if (activeTab === '사용중') return item.status === '사용중';
-    if (activeTab === '취소된 예약') return item.status === '취소됨';
-    if (activeTab === '완료') return item.status === '완료';
+    if (activeTab === '승인/예약 대기') {
+      return item.status === 'waiting' || item.status === 'reserved';
+    }
+    if (activeTab === '사용중') return item.status === 'using';
+    if (activeTab === '취소된 예약') return item.status === 'cancelled';
+    if (activeTab === '완료') return item.status === 'completed';
     return true;
   });
+
+  const getTabCount = (tab) => {
+    if (tab === '전체 예약') return reservations.length;
+    if (tab === '승인/예약 대기') {
+      return reservations.filter(
+        (item) => item.status === 'waiting' || item.status === 'reserved'
+      ).length;
+    }
+    if (tab === '사용중') {
+      return reservations.filter((item) => item.status === 'using').length;
+    }
+    if (tab === '취소된 예약') {
+      return reservations.filter((item) => item.status === 'cancelled').length;
+    }
+    if (tab === '완료') {
+      return reservations.filter((item) => item.status === 'completed').length;
+    }
+    return 0;
+  };
 
   return (
     <Container>
       <PageHeader>
         <TitleArea>
           <PageTitle>📅 예약 관리 제어 센터</PageTitle>
-          <PageSubtitle>학생들의 실습실 예약 승인/거절 및 이용 상태를 실시간으로 관제합니다.</PageSubtitle>
+          <PageSubtitle>
+            학생들의 실습실 예약 승인/거절 및 이용 상태를 실시간으로 관제합니다.
+          </PageSubtitle>
         </TitleArea>
+
         <SystemNoticeCard>
           <NoticeBadge>오토 스케줄 활성화</NoticeBadge>
-          <NoticeText>종료 시간이 도래하면 시스템이 자동으로 <strong>[사용종료 ➡️ 완료]</strong> 처리를 수행합니다.</NoticeText>
+          <NoticeText>
+            종료 시간이 도래하면 시스템이 자동으로
+            <strong> [사용종료 ➡️ 완료]</strong> 처리를 수행합니다.
+          </NoticeText>
         </SystemNoticeCard>
       </PageHeader>
 
       <TabButtonGroup>
-        {tabs.map(tab => (
-          <TabButton 
-            key={tab} 
-            active={activeTab === tab} 
+        {tabs.map((tab) => (
+          <TabButton
+            key={tab}
+            active={activeTab === tab}
             onClick={() => setActiveTab(tab)}
           >
             {tab}
-            <TabCount>
-              {tab === '전체 예약' ? reservations.length : reservations.filter(r => {
-                if (tab === '승인/예약 대기') return r.status === '대기중' || r.status === '예약됨';
-                if (tab === '사용중') return r.status === '사용중';
-                if (tab === '취소된 예약') return r.status === '취소됨';
-                if (tab === '완료') return r.status === '완료';
-                return false;
-              }).length}
-            </TabCount>
+            <TabCount>{getTabCount(tab)}</TabCount>
           </TabButton>
         ))}
       </TabButtonGroup>
@@ -86,55 +214,134 @@ export default function Reservation() {
               <th style={{ textAlign: 'center' }}>관제 명령</th>
             </tr>
           </thead>
+
           <tbody>
-            {filteredReservations.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td
+                  colSpan="7"
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#64748b',
+                  }}
+                >
+                  예약 목록을 불러오는 중입니다.
+                </td>
+              </tr>
+            ) : error ? (
+              <tr>
+                <td
+                  colSpan="7"
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#ef4444',
+                  }}
+                >
+                  {error}
+                </td>
+              </tr>
+            ) : filteredReservations.length === 0 ? (
+              <tr>
+                <td
+                  colSpan="7"
+                  style={{
+                    textAlign: 'center',
+                    padding: '40px',
+                    color: '#94a3b8',
+                  }}
+                >
                   해당 상태의 예약 내역이 존재하지 않습니다.
                 </td>
               </tr>
             ) : (
-              filteredReservations.map(res => (
-                <tr key={res.id}>
-                  <td><strong>{res.name}</strong></td>
-                  <td style={{ color: '#64748b' }}>{res.studentId}</td>
-                  <td>{res.lab}</td>
-                  <td><SeatBadge>{res.bench}</SeatBadge></td>
-                  <td>{res.time}</td>
-                  <td>
-                    <StatusBadge status={res.status}>
-                      {res.status}
-                    </StatusBadge>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    {res.status === '대기중' && (
-                      <ActionGroup>
-                        <ApproveBtn onClick={() => handleApprove(res.id)}>승인</ApproveBtn>
-                        <RejectBtn onClick={() => handleReject(res.id)}>거절</RejectBtn>
-                      </ActionGroup>
-                    )}
-                    {/* 💡 모래시계 아이콘 제거 */}
-                    {res.status === '예약됨' && (
-                      <ActionGroup>
-                        <SystemText color="#15803d">실습 시작 대기 중</SystemText>
-                      </ActionGroup>
-                    )}
-                    {/* 💡 달리는 사람 아이콘 제거 */}
-                    {res.status === '사용중' && (
-                      <ActionGroup>
-                        <EarlyCloseBtn onClick={() => {
-                          setReservations(prev => prev.map(item => item.id === res.id ? { ...item, status: '완료' } : item));
-                          alert('사용자가 조기 종료를 처리하여 [완료] 상태로 회수되었습니다.');
-                        }}>
-                          강제 회수
-                        </EarlyCloseBtn>
-                      </ActionGroup>
-                    )}
-                    {res.status === '취소됨' && <SystemText color="#ef4444">거절/취소 처리됨</SystemText>}
-                    {res.status === '완료' && <SystemText color="#64748b">자동 종료 완료</SystemText>}
-                  </td>
-                </tr>
-              ))
+              filteredReservations.map((reservation) => {
+                const statusLabel = getStatusLabel(reservation.status);
+
+                return (
+                  <tr key={reservation._id}>
+                    <td>
+                      <strong>{reservation.user_id?.name || '-'}</strong>
+                    </td>
+
+                    <td style={{ color: '#64748b' }}>
+                      {reservation.user_id?.student_id || '-'}
+                    </td>
+
+                    <td>
+                      {reservation.resource_id?.name || '-'}
+                    </td>
+
+                    <td>
+                      <SeatBadge>
+                        {reservation.resource_id?.lab_id || '-'}
+                      </SeatBadge>
+                    </td>
+
+                    <td>
+                      {formatReservationTime(
+                        reservation.start_time,
+                        reservation.end_time
+                      )}
+                    </td>
+
+                    <td>
+                      <StatusBadge status={statusLabel}>
+                        {statusLabel}
+                      </StatusBadge>
+                    </td>
+
+                    <td style={{ textAlign: 'center' }}>
+                      {reservation.status === 'waiting' && (
+                        <ActionGroup>
+                          <ApproveBtn
+                            onClick={() => handleApprove(reservation._id)}
+                          >
+                            승인
+                          </ApproveBtn>
+
+                          <RejectBtn
+                            onClick={() => handleReject(reservation._id)}
+                          >
+                            거절
+                          </RejectBtn>
+                        </ActionGroup>
+                      )}
+
+                      {reservation.status === 'reserved' && (
+                        <ActionGroup>
+                          <SystemText color="#15803d">
+                            실습 시작 대기 중
+                          </SystemText>
+                        </ActionGroup>
+                      )}
+
+                      {reservation.status === 'using' && (
+                        <ActionGroup>
+                          <EarlyCloseBtn
+                            onClick={() => handleForceEnd(reservation._id)}
+                          >
+                            강제 회수
+                          </EarlyCloseBtn>
+                        </ActionGroup>
+                      )}
+
+                      {reservation.status === 'cancelled' && (
+                        <SystemText color="#ef4444">
+                          거절/취소 처리됨
+                        </SystemText>
+                      )}
+
+                      {reservation.status === 'completed' && (
+                        <SystemText color="#64748b">
+                          자동 종료 완료
+                        </SystemText>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </MainTable>
