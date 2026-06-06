@@ -64,22 +64,21 @@ export default function ResourceManager() {
       return;
     }
 
-    const newResource = {
-      name: formData.name.trim(),
-      lab_id: formData.type.trim(),
-      spec: {
-        description: formData.spec.trim()
-      },
-      status: 'active',
-      operating_hours: {
-        days: [],
-        start_time: '',
-        end_time: '',
-        max_concurrent: 1
-      },
-      equipment: []
-    };
-
+  const newResource = {
+    name: formData.name.trim(),
+    lab_id: formData.type.trim(),
+    spec: {
+      description: formData.spec.trim()
+    },
+    status: 'active',
+    operating_hours: {
+      days: ['mon', 'tue', 'wed', 'thu', 'fri'],
+      start_time: '09:00',
+      end_time: '22:00',
+      max_concurrent: 1
+    },
+    equipment: []
+  };
     try {
       setSaving(true);
 
