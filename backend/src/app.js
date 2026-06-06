@@ -25,6 +25,7 @@ require("./models/Resource");
 require("./models/Reservation");
 require("./models/Notice");
 require("./models/Issue");
+require("./models/EmailVerification");
 
 const authRouter = require("./routes/auth");
 app.use("/api/auth", authRouter);
@@ -46,7 +47,6 @@ app.use("/api/notices", noticeRouter);
 
 const issueRouter = require("./routes/issues");
 app.use("/api/issues", issueRouter);
-
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

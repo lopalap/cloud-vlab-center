@@ -1,6 +1,8 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const EmailVerification = require("../models/EmailVerification");
+const { sendVerificationEmail } = require("../utils/mailer");
 
 // 회원가입
 exports.register = async (req, res) => {
@@ -20,6 +22,15 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "비밀번호는 6자 이상이어야 합니다." });
     }
 
+    // ✅ 이메일 인증 완료 여부 확인 (추가된 부분)
+    const verified = await EmailVerification.findOne({
+      email: email.trim(),
+      verified: true,
+    });
+    if (!verified) {
+      return res.status(400).json({ message: "이메일 인증이 완료되지 않았습니다." });
+    }
+
     const existing = await User.findOne({ student_id: student_id.trim() });
     if (existing) {
       return res.status(400).json({ message: "이미 존재하는 학번입니다." });
@@ -33,6 +44,9 @@ exports.register = async (req, res) => {
       email: email.trim(),
       password: hashedPassword,
     });
+
+    // ✅ 회원가입 완료 후 인증 기록 삭제 (추가된 부분)
+    await EmailVerification.deleteMany({ email: email.trim() });
 
     res.status(201).json({ message: "회원가입 완료" });
   } catch (err) {
@@ -113,6 +127,62 @@ exports.logout = async (req, res) => {
       { refresh_token: null },
     );
     res.json({ message: "로그아웃 완료" });
+  } catch (err) {
+    res.status(500).json({ message: "서버 오류", error: err.message });
+  }
+};
+
+// 이메일 인증 코드 발송
+exports.sendEmailCode = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return res.status(400).json({ message: "이메일을 입력해주세요." });
+    }
+
+    // 기존 인증 코드 삭제
+    await EmailVerification.deleteMany({ email });
+
+    // 6자리 랜덤 코드 생성
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 5분 후 만료
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await EmailVerification.create({ email, code, verified: false, expiresAt });
+
+    await sendVerificationEmail(email, code);
+
+    res.json({ message: "인증 코드가 발송되었습니다." });
+  } catch (err) {
+    res.status(500).json({ message: "서버 오류", error: err.message });
+  }
+};
+
+// 이메일 인증 코드 검증
+exports.verifyEmailCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    const record = await EmailVerification.findOne({ email });
+
+    if (!record) {
+      return res.status(400).json({ message: "인증 코드를 먼저 요청해주세요." });
+    }
+
+    if (record.expiresAt < new Date()) {
+      return res.status(400).json({ message: "인증 코드가 만료되었습니다." });
+    }
+
+    if (record.code !== code) {
+      return res.status(400).json({ message: "인증 코드가 올바르지 않습니다." });
+    }
+
+    record.verified = true;
+    await record.save();
+
+    res.json({ message: "이메일 인증이 완료되었습니다." });
   } catch (err) {
     res.status(500).json({ message: "서버 오류", error: err.message });
   }
