@@ -38,6 +38,25 @@ export const logout = async () => {
   localStorage.removeItem("refreshToken");
 };
 
+// 이메일 인증 코드 발송
+export const sendEmailCode = async (email) => {
+  const res = await api.post("/api/auth/send-email", {
+    email: email.trim(),
+  });
+
+  return res.data;
+};
+
+// 이메일 인증 코드 검증
+export const verifyEmailCode = async (email, code) => {
+  const res = await api.post("/api/auth/verify-email", {
+    email: email.trim(),
+    code: code.trim(),
+  });
+
+  return res.data;
+};
+
 // 회원가입
 export const register = async (name, student_id, email, password) => {
   const res = await api.post("/api/auth/register", {
