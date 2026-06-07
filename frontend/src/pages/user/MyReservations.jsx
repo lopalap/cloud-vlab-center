@@ -356,8 +356,24 @@ function MyReservations({ onUseReservation }) {
                             onClick={() => onUseReservation(reservation._id)}
                             aria-label="실시간 사용 화면으로 이동"
                             title="실시간 사용"
+                            style={{
+                              minWidth: "92px",
+                              padding: "8px 14px",
+                              backgroundColor: "#2563eb",
+                              color: "#ffffff",
+                              border: "none",
+                              borderRadius: "8px",
+                              fontSize: "13px",
+                              fontWeight: "600",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              whiteSpace: "nowrap",
+                              lineHeight: "1.2",
+                            }}
                           >
-                            <span>실시간 사용</span>
+                            실시간 사용
                           </button>
                         )}
 
