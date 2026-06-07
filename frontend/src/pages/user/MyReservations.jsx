@@ -7,11 +7,11 @@ import {
 
 const PRESET_DESCRIPTIONS = {
   "alpine-shell": "Alpine (SSH, 포트 자동 배정)",
-  "ubuntu":       "Ubuntu 22.04 (SSH, 포트 자동 배정)",
-  "centos":       "CentOS Stream 9 (SSH, 포트 자동 배정)",
-  "rockylinux":   "Rocky Linux 9 (SSH, 포트 자동 배정)",
-  "kalilinux":    "Kali Linux (SSH, 포트 자동 배정)",
-  "jupyter":      "Jupyter Notebook (포트 8888)",
+  ubuntu: "Ubuntu 22.04 (SSH, 포트 자동 배정)",
+  centos: "CentOS Stream 9 (SSH, 포트 자동 배정)",
+  rockylinux: "Rocky Linux 9 (SSH, 포트 자동 배정)",
+  kalilinux: "Kali Linux (SSH, 포트 자동 배정)",
+  jupyter: "Jupyter Notebook (포트 8888)",
   "postgres-lab": "PostgreSQL 16 (포트 5432)",
 };
 
@@ -152,13 +152,23 @@ function MyReservations({ onUseReservation }) {
       return "-";
     }
 
-    const start = new Date(startTime).toLocaleTimeString("ko-KR", {
+    const startDate = new Date(startTime);
+    const endDate = new Date(endTime);
+
+    if (
+      Number.isNaN(startDate.getTime()) ||
+      Number.isNaN(endDate.getTime())
+    ) {
+      return "-";
+    }
+
+    const start = startDate.toLocaleTimeString("ko-KR", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     });
 
-    const end = new Date(endTime).toLocaleTimeString("ko-KR", {
+    const end = endDate.toLocaleTimeString("ko-KR", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
@@ -176,12 +186,9 @@ function MyReservations({ onUseReservation }) {
       return spec;
     }
 
-    const details = [
-      spec.gpu,
-      spec.cpu,
-      spec.memory,
-      spec.storage,
-    ].filter(Boolean);
+    const details = [spec.gpu, spec.cpu, spec.memory, spec.storage].filter(
+      Boolean
+    );
 
     if (details.length > 0) {
       return details.join(" / ");
@@ -191,13 +198,20 @@ function MyReservations({ onUseReservation }) {
   };
 
   const isReservationAvailableNow = (reservation) => {
-    if (reservation.status !== "reserved") {
+    if (!reservation || reservation.status !== "reserved") {
       return false;
     }
 
     const now = new Date();
     const startTime = new Date(reservation.start_time);
     const endTime = new Date(reservation.end_time);
+
+    if (
+      Number.isNaN(startTime.getTime()) ||
+      Number.isNaN(endTime.getTime())
+    ) {
+      return false;
+    }
 
     return now >= startTime && now < endTime;
   };
@@ -212,7 +226,9 @@ function MyReservations({ onUseReservation }) {
         return "사용 중";
       }
 
-      if (new Date() >= new Date(reservation.end_time)) {
+      const endTime = new Date(reservation.end_time);
+
+      if (!Number.isNaN(endTime.getTime()) && new Date() >= endTime) {
         return "지난 예약";
       }
 
@@ -235,10 +251,15 @@ function MyReservations({ onUseReservation }) {
   };
 
   const canEnterUsageStatus = (reservation) => {
-    return (
-      reservation.status === "using" ||
-      isReservationAvailableNow(reservation)
-    );
+    if (!reservation) {
+      return false;
+    }
+
+    if (reservation.status === "using") {
+      return true;
+    }
+
+    return isReservationAvailableNow(reservation);
   };
 
   const filteredReservations = reservations.filter(
@@ -268,6 +289,7 @@ function MyReservations({ onUseReservation }) {
           {tabs.map((tab) => (
             <button
               key={tab}
+              type="button"
               className={`tab-button ${activeTab === tab ? "active" : ""}`}
               onClick={() => setActiveTab(tab)}
             >
@@ -298,43 +320,52 @@ function MyReservations({ onUseReservation }) {
                       ? `[Docker] ${reservation.os_preset}`
                       : reservation.resource_id?.name || "-"}
                   </td>
+
                   <td>
                     {reservation.os_preset
                       ? "컨테이너"
                       : reservation.resource_id?.lab_id || "-"}
                   </td>
+
                   <td>
                     {reservation.os_preset
-                      ? PRESET_DESCRIPTIONS[reservation.os_preset] || reservation.os_preset
+                      ? PRESET_DESCRIPTIONS[reservation.os_preset] ||
+                        reservation.os_preset
                       : formatSpec(reservation.resource_id?.spec)}
                   </td>
+
                   <td>{formatDate(reservation.start_time)}</td>
+
                   <td>
-                    {formatTime(
-                      reservation.start_time,
-                      reservation.end_time
-                    )}
+                    {formatTime(reservation.start_time, reservation.end_time)}
                   </td>
+
                   <td>
                     <span className={getBadgeClassName(reservation.status)}>
                       {statusLabel[reservation.status] || reservation.status}
                     </span>
                   </td>
+
                   <td>
                     <div className="table-actions">
-                      {canEnterUsageStatus(reservation) && (
-                        <button
-                          className="primary-button"
-                          onClick={() => onUseReservation(reservation._id)}
-                        >
-                          실시간 사용
-                        </button>
-                      )}
+                      {canEnterUsageStatus(reservation) &&
+                        typeof onUseReservation === "function" && (
+                          <button
+                            type="button"
+                            className="primary-button usage-button"
+                            onClick={() => onUseReservation(reservation._id)}
+                            aria-label="실시간 사용 화면으로 이동"
+                            title="실시간 사용"
+                          >
+                            <span>실시간 사용</span>
+                          </button>
+                        )}
 
                       {(reservation.status === "waiting" ||
                         (reservation.status === "reserved" &&
                           !isReservationAvailableNow(reservation))) && (
                         <button
+                          type="button"
                           onClick={() => handleCancel(reservation._id)}
                         >
                           취소
@@ -344,6 +375,7 @@ function MyReservations({ onUseReservation }) {
                       {(reservation.status === "completed" ||
                         reservation.status === "cancelled") && (
                         <button
+                          type="button"
                           onClick={() => handleViewDetail(reservation)}
                         >
                           상세보기
@@ -357,29 +389,27 @@ function MyReservations({ onUseReservation }) {
         </table>
 
         {loading && (
-          <div className="empty-message">
-            예약 내역을 불러오는 중입니다.
-          </div>
+          <div className="empty-message">예약 내역을 불러오는 중입니다.</div>
         )}
 
         {!loading && errorMessage && (
+          <div className="empty-message">{errorMessage}</div>
+        )}
+
+        {!loading && !errorMessage && filteredReservations.length === 0 && (
           <div className="empty-message">
-            {errorMessage}
+            해당 상태의 예약 내역이 없습니다.
           </div>
         )}
 
-        {!loading &&
-          !errorMessage &&
-          filteredReservations.length === 0 && (
-            <div className="empty-message">
-              해당 상태의 예약 내역이 없습니다.
-            </div>
-          )}
-
         <div className="table-footer">
-          <button className="page-arrow">‹</button>
+          <button type="button" className="page-arrow">
+            ‹
+          </button>
           <span>1 / 1</span>
-          <button className="page-arrow">›</button>
+          <button type="button" className="page-arrow">
+            ›
+          </button>
         </div>
       </section>
 
@@ -457,9 +487,7 @@ function MyReservations({ onUseReservation }) {
                 상세 정보를 불러오는 중입니다.
               </p>
             ) : detailError ? (
-              <p style={{ color: "#dc2626" }}>
-                {detailError}
-              </p>
+              <p style={{ color: "#dc2626" }}>{detailError}</p>
             ) : (
               <div
                 style={{
@@ -474,10 +502,15 @@ function MyReservations({ onUseReservation }) {
                       label="OS 환경"
                       value={`[Docker] ${selectedReservation.os_preset}`}
                     />
+
                     <DetailRow
                       label="환경 정보"
-                      value={PRESET_DESCRIPTIONS[selectedReservation.os_preset] || selectedReservation.os_preset}
+                      value={
+                        PRESET_DESCRIPTIONS[selectedReservation.os_preset] ||
+                        selectedReservation.os_preset
+                      }
                     />
+
                     <DetailRow
                       label="호스트 노드"
                       value={selectedReservation.resource_id?.name || "-"}
@@ -489,10 +522,12 @@ function MyReservations({ onUseReservation }) {
                       label="노드 이름"
                       value={selectedReservation.resource_id?.name || "-"}
                     />
+
                     <DetailRow
                       label="자원 분류"
                       value={selectedReservation.resource_id?.lab_id || "-"}
                     />
+
                     <DetailRow
                       label="스펙"
                       value={formatSpec(selectedReservation.resource_id?.spec)}
@@ -541,7 +576,9 @@ function MyReservations({ onUseReservation }) {
                 {selectedReservation.actual_start_time && (
                   <DetailRow
                     label="실제 사용 시작"
-                    value={formatDateTime(selectedReservation.actual_start_time)}
+                    value={formatDateTime(
+                      selectedReservation.actual_start_time
+                    )}
                   />
                 )}
 
