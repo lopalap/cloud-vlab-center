@@ -1,8 +1,5 @@
 # 클라우드 기반 학과 가상 실습실 예약 및 제어 센터 — 최종 보고서
 
-> **저장소**: https://github.com/lopalap/cloud-vlab-center  
-> **브랜치**: develop  
-> **담당**: 백엔드 (MongoDB 스키마 설계, API 설계 및 구현, 충돌 방지 알고리즘)
 
 ---
 
