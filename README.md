@@ -285,48 +285,181 @@
 | current_reservations | Number | 현재 예약 수 (기본: 0) |
 | is_active | Boolean | 계정 활성 여부 |
 | refresh_token | String | JWT Refresh Token |
+| createdAt | Date | 생성일시 |
+| updatedAt | Date | 수정일시 |
 
 #### Resource
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
+| _id | ObjectId | 기본 키 |
 | lab_id | String | 실습실 코드 |
 | name | String | 자원 이름 |
-| spec | Object | CPU, Memory, Storage, GPU 사양 |
+| spec | Object | 사양 정보 |
+| spec.cpu | String | CPU 사양 |
+| spec.memory | String | 메모리 사양 |
+| spec.storage | String | 스토리지 사양 |
+| spec.gpu | String | GPU 사양 |
 | status | String | active \| maintenance \| retired |
-| operating_hours | Object | 운영 요일, 시작/종료 시간, 최대 동시 예약 수 |
+| operating_hours | Object | 운영 시간 정보 |
+| operating_hours.days | String[] | 운영 요일 |
+| operating_hours.start_time | String | 운영 시작 시간 |
+| operating_hours.end_time | String | 운영 종료 시간 |
+| operating_hours.max_concurrent | Number | 최대 동시 예약 수 |
+| equipment | String[] | 보유 장비 목록 |
 | created_by | ObjectId | 등록 관리자 (ref: User) |
+| createdAt | Date | 생성일시 |
+| updatedAt | Date | 수정일시 |
 
 #### Reservation
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
+| _id | ObjectId | 기본 키 |
 | user_id | ObjectId | 예약자 (ref: User) |
 | resource_id | ObjectId | 예약 자원 (ref: Resource) |
 | start_time | Date | 시작 시각 |
 | end_time | Date | 종료 시각 |
+| purpose | String | 사용 목적 |
 | status | String | waiting \| reserved \| using \| completed \| cancelled |
 | approved_by | ObjectId | 승인 관리자 (ref: User) |
 | cancel_reason | String | 취소/거절 사유 |
 | actual_start_time | Date | 실제 사용 시작 시각 |
 | actual_end_time | Date | 실제 사용 종료 시각 |
+| container_id | String | Docker 컨테이너 ID |
 | container_info | Object | Docker 컨테이너 연결 정보 |
+| createdAt | Date | 생성일시 |
+| updatedAt | Date | 수정일시 |
 
-#### Notice / Issue / EmailVerification
+#### Notice
 
-- **Notice**: title, content, is_urgent, created_by
-- **Issue**: title, content, status(waiting/in_progress/resolved), created_by, resolved_by
-- **EmailVerification**: email, code, verified, expiresAt (TTL 인덱스, 5분 후 자동 삭제)
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| _id | ObjectId | 기본 키 |
+| title | String | 제목 |
+| content | String | 내용 |
+| is_urgent | Boolean | 긴급 공지 여부 |
+| created_by | ObjectId | 등록 관리자 (ref: User) |
+| createdAt | Date | 생성일시 |
+| updatedAt | Date | 수정일시 |
+
+#### Issue
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| _id | ObjectId | 기본 키 |
+| title | String | 제목 |
+| content | String | 내용 |
+| status | String | waiting \| in_progress \| resolved |
+| created_by | ObjectId | 등록자 (ref: User) |
+| resolved_by | ObjectId | 처리 관리자 (ref: User) |
+| createdAt | Date | 생성일시 |
+| updatedAt | Date | 수정일시 |
+
+#### EmailVerification
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| _id | ObjectId | 기본 키 |
+| email | String | 이메일 |
+| code | String | 인증 코드 (6자리) |
+| verified | Boolean | 인증 완료 여부 |
+| expiresAt | Date | 만료 시각 (TTL 인덱스, 5분 후 자동 삭제) |
 
 #### 클래스 간 관계
 
-```
-User  1 ──── N  Reservation (user_id)
-User  1 ──── N  Reservation (approved_by)
-Resource 1 ── N  Reservation (resource_id)
-User  1 ──── N  Resource (created_by)
-User  1 ──── N  Notice (created_by)
-User  1 ──── N  Issue (created_by, resolved_by)
+```mermaid
+classDiagram
+  class User {
+    +ObjectId _id
+    +String name
+    +String student_id
+    +String email
+    +String password
+    +String role
+    +Number max_reservations
+    +Number current_reservations
+    +Boolean is_active
+    +String refresh_token
+    +Date createdAt
+    +Date updatedAt
+  }
+
+  class Resource {
+    +ObjectId _id
+    +String lab_id
+    +String name
+    +Object spec
+    +String spec.cpu
+    +String spec.memory
+    +String spec.storage
+    +String spec.gpu
+    +String status
+    +Object operating_hours
+    +String[] operating_hours.days
+    +String operating_hours.start_time
+    +String operating_hours.end_time
+    +Number operating_hours.max_concurrent
+    +String[] equipment
+    +ObjectId created_by
+    +Date createdAt
+    +Date updatedAt
+  }
+
+  class Reservation {
+    +ObjectId _id
+    +ObjectId user_id
+    +ObjectId resource_id
+    +Date start_time
+    +Date end_time
+    +String purpose
+    +String status
+    +ObjectId approved_by
+    +String cancel_reason
+    +Date actual_start_time
+    +Date actual_end_time
+    +String container_id
+    +Object container_info
+    +Date createdAt
+    +Date updatedAt
+  }
+
+  class Notice {
+    +ObjectId _id
+    +String title
+    +String content
+    +Boolean is_urgent
+    +ObjectId created_by
+    +Date createdAt
+    +Date updatedAt
+  }
+
+  class Issue {
+    +ObjectId _id
+    +String title
+    +String content
+    +String status
+    +ObjectId created_by
+    +ObjectId resolved_by
+    +Date createdAt
+    +Date updatedAt
+  }
+
+  class EmailVerification {
+    +ObjectId _id
+    +String email
+    +String code
+    +Boolean verified
+    +Date expiresAt
+  }
+
+  User "1" --> "0..*" Reservation : user_id
+  Resource "1" --> "0..*" Reservation : resource_id
+  User "1" --> "0..*" Reservation : approved_by
+  User "1" --> "0..*" Resource : created_by
+  User "1" --> "0..*" Notice : created_by
+  User "1" --> "0..*" Issue : created_by
+  User "1" --> "0..*" Issue : resolved_by
 ```
 
 ### 3-3. 순서도 (Flowchart)
