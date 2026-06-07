@@ -347,6 +347,8 @@ User  1 ──── N  Issue (created_by, resolved_by)
 [인증 성공] 비밀번호 검증 → 토큰 생성 → 200 OK (accessToken, refreshToken)
 [인증 실패] 401 Unauthorized
 ```
+<img width="1011" height="974" alt="image" src="https://github.com/user-attachments/assets/e54427d4-22d6-4ac5-a891-e70ad3c1be83" />
+
 
 #### 예약 신청 흐름
 ```
@@ -357,6 +359,8 @@ User  1 ──── N  Issue (created_by, resolved_by)
 [중복 존재] 409 Conflict
 [예약 가능] 예약 생성 → 201 Created
 ```
+<img width="779" height="938" alt="image" src="https://github.com/user-attachments/assets/07af9aae-2a72-4579-bca4-09fb0ed98d1a" />
+
 
 #### 예약 승인/거절 흐름
 ```
@@ -364,6 +368,8 @@ User  1 ──── N  Issue (created_by, resolved_by)
 [승인] PATCH /api/reservations/:id/approve → status: reserved
 [거절] PATCH /api/reservations/:id/reject → status: cancelled + cancel_reason
 ```
+<img width="732" height="990" alt="image" src="https://github.com/user-attachments/assets/128eb9ab-0eb0-4899-abe0-b39c6c4832bb" />
+
 
 ### 3-5. 충돌 방지 알고리즘
 
